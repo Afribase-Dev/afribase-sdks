@@ -1,0 +1,21 @@
+name: afribase
+description: The official Dart/Flutter client for Afribase — an open-source backend-as-a-service platform.
+version: 0.3.0
+homepage: https://useafribase.app
+repository: https://github.com/afribase/afribase-dart
+issue_tracker: https://github.com/afribase/afribase-dart/issues
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.10.0"
+
+dependencies:
+  http: ^1.1.0
+  web_socket_channel: ^2.4.0
+  meta: ^1.9.0
+
+dev_dependencies:
+  test: ^1.24.0
+  lints: ^3.0.0
+  mockito: ^5.4.0
+  build_runner: ^2.4.0

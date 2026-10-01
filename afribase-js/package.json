@@ -1,0 +1,51 @@
+{
+  "name": "@afribase/afribase-js",
+  "version": "0.3.0",
+  "description": "The official JavaScript/TypeScript client for Afribase — Auth, Database, Realtime, Storage, and Edge Functions",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts --format cjs,esm --watch --dts",
+    "lint": "eslint src/**/*.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "afribase",
+    "baas",
+    "database",
+    "auth",
+    "rest",
+    "postgrest",
+    "realtime",
+    "storage",
+    "edge-functions",
+    "supabase-alternative"
+  ],
+  "author": "Afribase Team",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "cross-fetch": "^4.1.0"
+  },
+  "optionalDependencies": {
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "@types/ws": "^8.5.10",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.3"
+  }
+}
