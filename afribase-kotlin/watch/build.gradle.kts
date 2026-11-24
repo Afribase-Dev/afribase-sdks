@@ -1,7 +1,10 @@
+import com.vanniktech.maven.publish.AndroidSingleVariantLibrary
+import com.vanniktech.maven.publish.SonatypeHost
+
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
-    `maven-publish`
+    id("com.vanniktech.maven.publish")
 }
 
 android {
@@ -27,12 +30,6 @@ android {
         jvmTarget = "11"
     }
 
-    publishing {
-        singleVariant("release") {
-            withSourcesJar()
-        }
-    }
-
     testOptions {
         unitTests.isIncludeAndroidResources = true
     }
@@ -50,17 +47,46 @@ dependencies {
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 }
 
-// JitPack (jitpack.yml at the repo root) runs publishToMavenLocal and serves
-// the result as com.github.Afribase-Dev.afribase-sdks:watch-android:<tag>.
-afterEvaluate {
-    publishing {
-        publications {
-            create<MavenPublication>("release") {
-                from(components["release"])
-                groupId = "com.github.Afribase-Dev.afribase-sdks"
-                artifactId = "watch-android"
-                version = (findProperty("publishVersion") as String?) ?: "0.1.0"
+// Maven Central (Sonatype Central Portal) as dev.afribase:watch-android, and
+// JitPack (jitpack.yml at the repo root runs publishToMavenLocal).
+// Credentials and the signing key come from Gradle properties / env vars,
+// never from this file:
+//   mavenCentralUsername / mavenCentralPassword   (Central Portal user token)
+//   signingInMemoryKey / signingInMemoryKeyPassword (ASCII-armored GPG key)
+// as ORG_GRADLE_PROJECT_<name> in CI, or in ~/.gradle/gradle.properties.
+val publishGroup = (findProperty("publishGroup") as String?) ?: "dev.afribase"
+val publishVersion = (findProperty("publishVersion") as String?) ?: "0.1.0"
+
+mavenPublishing {
+    configure(AndroidSingleVariantLibrary(variant = "release", sourcesJar = true, publishJavadocJar = true))
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+    if (findProperty("signingInMemoryKey") != null) signAllPublications()
+
+    coordinates(publishGroup, "watch-android", publishVersion)
+
+    pom {
+        name.set("Afribase Watch for Android")
+        description.set("Base1 Watch for Android: errors, slow requests, UX signals, live presence and wireframe session replay that never captures pixels.")
+        inceptionYear.set("2026")
+        url.set("https://github.com/Afribase-Dev/afribase-sdks")
+        licenses {
+            license {
+                name.set("Apache-2.0")
+                url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                distribution.set("repo")
             }
+        }
+        developers {
+            developer {
+                id.set("afribase")
+                name.set("Afribase")
+                url.set("https://useafribase.app")
+            }
+        }
+        scm {
+            url.set("https://github.com/Afribase-Dev/afribase-sdks")
+            connection.set("scm:git:https://github.com/Afribase-Dev/afribase-sdks.git")
+            developerConnection.set("scm:git:ssh://git@github.com/Afribase-Dev/afribase-sdks.git")
         }
     }
 }

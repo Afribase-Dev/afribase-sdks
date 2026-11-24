@@ -12,7 +12,13 @@ and the dashboard.
 
 ## Install
 
-From JitPack:
+From Maven Central (after the first release):
+
+```kotlin
+implementation("dev.afribase:watch-android:0.1.0")
+```
+
+Or from JitPack now:
 
 ```kotlin
 // settings.gradle.kts

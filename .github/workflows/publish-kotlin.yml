@@ -1,0 +1,45 @@
+name: Publish watch-android (Maven Central)
+
+# Publishes dev.afribase:watch-android to Maven Central through the Sonatype
+# Central Portal. Repo secrets needed (Settings -> Secrets -> Actions):
+#   MAVEN_CENTRAL_USERNAME, MAVEN_CENTRAL_PASSWORD  - Central Portal user token
+#   SIGNING_KEY            - ASCII-armored GPG private key
+#   SIGNING_KEY_PASSWORD   - its passphrase
+#
+# Release: push a tag kotlin-<version> (e.g. kotlin-0.1.0). The upload is
+# left in the Portal as a deployment you publish by hand at
+# central.sonatype.com -> Deployments, until you switch to automatic.
+
+on:
+  push:
+    tags: ["kotlin-*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (e.g. 0.1.0)"
+        required: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: afribase-kotlin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Version
+        run: |
+          v="${{ github.event.inputs.version }}"
+          [ -n "$v" ] || v="${GITHUB_REF_NAME#kotlin-}"
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+      - run: ./gradlew :watch:testDebugUnitTest
+      - run: ./gradlew :watch:publishToMavenCentral -PpublishVersion=$VERSION --no-configuration-cache
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
