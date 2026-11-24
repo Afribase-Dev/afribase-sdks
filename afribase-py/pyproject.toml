@@ -7,7 +7,7 @@ name = "afribase"
 version = "0.4.0"
 description = "The official Python SDK for Afribase — an open-source backend-as-a-service platform."
 readme = "README.md"
-license = "MIT"
+license = "Apache-2.0"
 requires-python = ">=3.9"
 authors = [
     { name = "Afribase", email = "dev@useafribase.app" },
@@ -16,7 +16,7 @@ keywords = ["afribase", "baas", "supabase", "database", "auth", "realtime", "sto
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
