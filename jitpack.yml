@@ -1,5 +1,5 @@
 # JitPack builds the Android Watch SDK from afribase-kotlin/.
-# Use: implementation("com.github.Afribase-Dev.afribase-sdks:watch-android:<tag>")
+# Use: implementation("com.github.Afribase-Dev:afribase-sdks:<tag>")
 jdk:
   - openjdk17
 before_install:

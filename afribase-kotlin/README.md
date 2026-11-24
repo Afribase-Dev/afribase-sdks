@@ -10,18 +10,24 @@ boxes, kinds and masked text, so apps that block screen capture
 `watch-wireframe-contract.md` (v1), shared with the Swift SDK, the server
 and the dashboard.
 
-> Status: 0.1.0, unreleased. It is not on Maven Central or JitPack. To try
-> it, include the `:watch` module from this folder in your build.
-
 ## Install
+
+From JitPack:
 
 ```kotlin
 // settings.gradle.kts
-include(":watch")
-project(":watch").projectDir = file("../afribase-backend/sdks/afribase-kotlin/watch")
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven("https://jitpack.io")
+    }
+}
 
 // app/build.gradle.kts
-dependencies { implementation(project(":watch")) }
+dependencies {
+    implementation("com.github.Afribase-Dev:afribase-sdks:watch-0.1.0")
+}
 ```
 
 minSdk 24. No runtime dependencies. Compose and OkHttp support only switch on
