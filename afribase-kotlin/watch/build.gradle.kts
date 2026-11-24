@@ -14,7 +14,7 @@ android {
     defaultConfig {
         minSdk = 24
         consumerProguardFiles("consumer-rules.pro")
-        buildConfigField("String", "SDK_VERSION", "\"0.1.0\"")
+        buildConfigField("String", "SDK_VERSION", "\"0.1.1\"")
     }
 
     buildFeatures {
@@ -55,7 +55,7 @@ dependencies {
 //   signingInMemoryKey / signingInMemoryKeyPassword (ASCII-armored GPG key)
 // as ORG_GRADLE_PROJECT_<name> in CI, or in ~/.gradle/gradle.properties.
 val publishGroup = (findProperty("publishGroup") as String?) ?: "io.github.afribase-dev"
-val publishVersion = (findProperty("publishVersion") as String?) ?: "0.1.0"
+val publishVersion = (findProperty("publishVersion") as String?) ?: "0.1.1"
 
 mavenPublishing {
     configure(AndroidSingleVariantLibrary(variant = "release", sourcesJar = true, publishJavadocJar = true))

@@ -20,6 +20,12 @@ package com.afribase.watch
  * @param slowScreenMs a screen whose first frame takes longer than this is
  *   reported as a `slow` event.
  * @param debug log what the SDK sends to logcat (tag `AfribaseWatch`).
+ * @param replayOnSecureWindows replay: record a wireframe even when the window
+ *   has `FLAG_SECURE` (by default such windows are sent only as "secure screen"
+ *   placeholders). Wireframes never contain pixels, so this does not weaken what
+ *   `FLAG_SECURE` protects; on those windows all text is masked regardless of
+ *   [maskAllText] (only `watchUnmask` views are sent as is). Screens marked
+ *   `watchSecureScreen` stay placeholders. Default false.
  */
 data class WatchConfig @JvmOverloads constructor(
     val key: String,
@@ -34,4 +40,5 @@ data class WatchConfig @JvmOverloads constructor(
     val user: (() -> String?)? = null,
     val slowScreenMs: Long = 3000,
     val debug: Boolean = false,
+    val replayOnSecureWindows: Boolean = false,
 )

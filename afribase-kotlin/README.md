@@ -15,7 +15,7 @@ and the dashboard.
 From Maven Central (after the first release):
 
 ```kotlin
-implementation("io.github.afribase-dev:watch-android:0.1.0")
+implementation("io.github.afribase-dev:watch-android:0.1.1")
 ```
 
 Or from JitPack now:
@@ -32,7 +32,7 @@ dependencyResolutionManagement {
 
 // app/build.gradle.kts
 dependencies {
-    implementation("com.github.Afribase-Dev:afribase-sdks:watch-0.1.0")
+    implementation("com.github.Afribase-Dev:afribase-sdks:watch-0.1.1")
 }
 ```
 
@@ -71,6 +71,7 @@ class App : Application() {
 | `sampleRate` | `1.0` | Share of error events sent. |
 | `slowScreenMs` | `3000` | A screen whose first frame takes longer is reported as `slow`. |
 | `debug` | `false` | Log what is sent to logcat (tag `AfribaseWatch`). |
+| `replayOnSecureWindows` | `false` | Replay: record a wireframe even on `FLAG_SECURE` windows (otherwise they are "secure screen" placeholders). No pixels are ever taken; on those windows all text is masked whatever `maskAllText` says. Screens marked `watchSecureScreen` stay placeholders. |
 
 ## Client API (same as the JS SDK)
 

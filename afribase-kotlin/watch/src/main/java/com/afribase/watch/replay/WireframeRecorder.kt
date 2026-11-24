@@ -31,6 +31,7 @@ internal class WireframeRecorder(
     private val pending: EventStore,
     private val log: (String) -> Unit,
     private val compose: ComposeBridge? = null,
+    private val replayOnSecureWindows: Boolean = false,
 ) {
     private val main = Handler(Looper.getMainLooper())
     val buffer = ReplayBuffer()
@@ -67,7 +68,7 @@ internal class WireframeRecorder(
         activity = a?.let { WeakReference(it) }
         if (a != null && name != null && name != screen) {
             screen = name
-            secure = isWindowSecure(a)
+            secure = treatAsSecure(a)
             lastScrolls = emptyMap()
             add("screen", mapOf("screen" to name, "secure" to secure))
             policy.reset()
@@ -98,7 +99,7 @@ internal class WireframeRecorder(
 
     /** Main thread. x/y in dp on screen; dropped on secure screens. */
     fun touch(phase: String, x: Float, y: Float) {
-        val sec = secure || activity?.get()?.let { isWindowSecure(it) } == true
+        val sec = secure || activity?.get()?.let { treatAsSecure(it) } == true
         if (sec) add("touch", mapOf("phase" to phase)) else add("touch", mapOf("phase" to phase, "x" to x, "y" to y))
     }
 
@@ -194,15 +195,19 @@ internal class WireframeRecorder(
         val started = System.nanoTime()
         decor.getLocationOnScreen(origin)
         val dm = a.resources.displayMetrics
+        val flagSecure = (window.attributes.flags and android.view.WindowManager.LayoutParams.FLAG_SECURE) != 0
         val ctx = WalkContext(
             density = dm.density,
             screenWpx = decor.width + maxOf(0, origin[0]),
             screenHpx = decor.height + maxOf(0, origin[1]),
-            maskAllText = maskAllText,
+            // A FLAG_SECURE window recorded on the owner's say-so: text is
+            // always masked there, whatever maskAllText says.
+            maskAllText = maskAllText || (replayOnSecureWindows && flagSecure),
             ids = ids,
             deadlineNanos = started + HARD_CAP_NANOS,
         )
-        val result = walker.walk(screen, decor, window.attributes.flags, origin, ctx)
+        val flags = if (replayOnSecureWindows) window.attributes.flags and android.view.WindowManager.LayoutParams.FLAG_SECURE.inv() else window.attributes.flags
+        val result = walker.walk(screen, decor, flags, origin, ctx)
         val elapsed = System.nanoTime() - started
         if (elapsed > BUDGET_NANOS) {
             // Over budget: skip the next tick(s), more for slower walks.
@@ -263,6 +268,9 @@ internal class WireframeRecorder(
         val json = Json.write(m)
         worker.execute { buffer.add(BufferedEvent(t, type, json)) }
     }
+
+    /** FLAG_SECURE counts as a secure screen unless the owner opted in. */
+    private fun treatAsSecure(a: Activity): Boolean = !replayOnSecureWindows && isWindowSecure(a)
 
     companion object {
         const val INTERVAL_MS = 500L
