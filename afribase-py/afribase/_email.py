@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from afribase._http import handle_response, sync_request
+from afribase._http import HeadersMixin, handle_response
 
 
-class AfribaseEmailClient:
+class AfribaseEmailClient(HeadersMixin):
     """Send transactional emails using your project's configured SMTP provider.
 
     Access via ``client.email``.
@@ -77,7 +77,7 @@ class AfribaseEmailClient:
         if from_name is not None:
             body["from_name"] = from_name
 
-        resp = sync_request(
+        resp = self._sync(
             f"{self._url}/{self._slug}/send",
             method="POST",
             api_key=self._api_key,
@@ -92,7 +92,7 @@ class AfribaseEmailClient:
         Returns:
             Dict with ``"data"`` (list of template dicts) and ``"error"`` keys.
         """
-        resp = sync_request(
+        resp = self._sync(
             f"{self._url}/{self._slug}/templates",
             method="GET",
             api_key=self._api_key,

@@ -10,6 +10,12 @@ from ._functions import AfribaseFunctionsClient
 from ._query_builder import AfribaseQueryBuilder, AfribaseRpcBuilder
 from ._realtime import AfribaseRealtimeClient, RealtimeChannel
 from ._storage import AfribaseStorageClient
+from ._types import SupportedStorage
+
+
+def _expand_url(url: str) -> str:
+    """A bare project ref becomes https://<ref>.afribase.dev, like the JS createClient."""
+    return url if url.startswith("http") else f"https://{url}.afribase.dev"
 
 
 def _extract_slug(url: str) -> str:
@@ -72,10 +78,16 @@ class AfribaseClient:
         storage_url: Optional[str] = None,
         functions_url: Optional[str] = None,
         realtime_url: Optional[str] = None,
+        auto_refresh_token: bool = True,
+        persist_session: bool = True,
+        storage: Optional[SupportedStorage] = None,
     ) -> None:
-        self._url = afribase_url.rstrip("/")
+        self._url = _expand_url(afribase_url).rstrip("/")
         self._key = afribase_key
         self._headers = headers or {}
+        self._auto_refresh_token = auto_refresh_token
+        self._persist_session = persist_session
+        self._session_storage = storage
         self._auth_url = auth_url or f"{self._url}/auth/v1"
         self._rest_url = rest_url or f"{self._url}/rest/v1"
         self._storage_url = storage_url or f"{self._url}/storage/v1"
@@ -97,11 +109,24 @@ class AfribaseClient:
     def auth(self) -> AfribaseAuthClient:
         """Auth client (sign-up, sign-in, tokens, OAuth, OTP, …)."""
         if self._auth is None:
-            self._auth = AfribaseAuthClient(
+            auth = AfribaseAuthClient(
                 url=self._auth_url,
                 api_key=self._key,
                 headers=self._headers,
+                auto_refresh_token=self._auto_refresh_token,
+                persist_session=self._persist_session,
+                storage=self._session_storage,
             )
+            self._auth = auth
+
+            # Keep realtime on the current token, like the JS client.
+            def on_change(_event: Any, session: Any) -> None:
+                if self._realtime is not None:
+                    self._realtime.set_auth(session.access_token if session else None)
+
+            auth.on_auth_state_change(on_change)
+            if self._session_storage is not None:
+                auth.initialize()
         return self._auth
 
     @property
@@ -113,6 +138,7 @@ class AfribaseClient:
                 api_key=self._key,
                 get_access_token=lambda: self.auth.access_token,
             )
+            self._storage._default_headers = self._headers
         return self._storage
 
     @property
@@ -124,6 +150,7 @@ class AfribaseClient:
                 api_key=self._key,
                 get_access_token=lambda: self.auth.access_token,
             )
+            self._functions._default_headers = self._headers
         return self._functions
 
     @property
@@ -145,6 +172,7 @@ class AfribaseClient:
                 api_key=self._key,
                 get_access_token=lambda: self.auth.access_token,
             )
+            self._email._default_headers = self._headers
         return self._email
 
     @property
@@ -162,31 +190,45 @@ class AfribaseClient:
 
     def from_(self, table: str) -> AfribaseQueryBuilder:
         """Return a query builder for *table* (PostgREST)."""
-        return AfribaseQueryBuilder(
+        qb = AfribaseQueryBuilder(
             url=f"{self._rest_url}/{table}",
             api_key=self._key,
             access_token=self.auth.access_token,
         )
+        qb._default_headers = self._headers
+        return qb
 
     def rpc(
         self,
         fn: str,
         params: Optional[Dict[str, Any]] = None,
+        *,
+        count: Optional[str] = None,
+        head: bool = False,
+        get: bool = False,
     ) -> AfribaseRpcBuilder:
-        """Call a Postgres function via RPC."""
-        return AfribaseRpcBuilder(
+        """Call a Postgres function via RPC (``count``: exact | planned | estimated)."""
+        rb = AfribaseRpcBuilder(
             rest_url=self._rest_url,
             fn=fn,
             params=params or {},
             api_key=self._key,
             access_token=self.auth.access_token,
+            head=head,
+            count=count,
+            get=get,
         )
+        rb._default_headers = self._headers
+        return rb
 
     # ─── Realtime helpers ─────────────────────────────────────────────
 
-    def channel(self, name: str) -> RealtimeChannel:
-        """Create (or get) a realtime channel."""
-        return self.realtime.channel(name)
+    def channel(self, name: str, config: Optional[Dict[str, Any]] = None) -> RealtimeChannel:
+        """Create (or get) a realtime channel.
+
+        ``config``: ``{"broadcast": {"self": bool, "ack": bool}, "presence": {"key": str}}``.
+        """
+        return self.realtime.channel(name, config)
 
     def remove_channel(self, channel: RealtimeChannel) -> None:
         """Remove a specific realtime channel."""
@@ -223,11 +265,15 @@ def create_client(
     storage_url: Optional[str] = None,
     functions_url: Optional[str] = None,
     realtime_url: Optional[str] = None,
+    auto_refresh_token: bool = True,
+    persist_session: bool = True,
+    storage: Optional[SupportedStorage] = None,
 ) -> AfribaseClient:
     """Create an Afribase client.
 
     Args:
-        afribase_url: Your project URL  (e.g. ``https://api.useafribase.app``).
+        afribase_url: Your project URL  (e.g. ``https://api.useafribase.app``), or a bare
+            project ref, which becomes ``https://<ref>.afribase.dev``.
         afribase_key: Your project anon/public API key.
         headers: Optional extra headers included in every request.
         auth_url: Override the auth service URL (e.g. ``https://api.useafribase.app/auth/v1/myproject``).
@@ -235,6 +281,11 @@ def create_client(
         storage_url: Override the storage service URL.
         functions_url: Override the edge functions URL.
         realtime_url: Override the realtime service URL.
+        auto_refresh_token: Refresh the session 60 s before it expires (default True).
+        persist_session: Keep the session on the client (default True). Set False on servers
+            that act for many users: no session is held, saved or refreshed.
+        storage: Where to keep the session between runs (``get_item``/``set_item``/``remove_item``,
+            e.g. a file or Redis); loaded once on first use of ``client.auth``.
 
     Returns:
         A configured :class:`AfribaseClient` instance.
@@ -248,4 +299,7 @@ def create_client(
         storage_url=storage_url,
         functions_url=functions_url,
         realtime_url=realtime_url,
+        auto_refresh_token=auto_refresh_token,
+        persist_session=persist_session,
+        storage=storage,
     )

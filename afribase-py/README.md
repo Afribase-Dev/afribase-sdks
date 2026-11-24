@@ -171,6 +171,73 @@ url = afribase.storage.from_("product-images").get_public_url("logo.png")
 Public URLs carry a one-year immutable cache header, so give a changed image a
 new path rather than overwriting it.
 
+## Base1 Watch (error reporting)
+
+The backend counterpart of the JS SDK's `initWatch`: same config, event shape and
+kinds. Standard library only; events go out from a background thread in batches
+(at most 50 events / 256 KB), retried with backoff, flushed at exit, and the
+reporter never raises into your app.
+
+```python
+from afribase import watch
+
+watch.init_watch(
+    "abw_...", "https://<api>/watch/ingest",
+    release="1.4.0", environment="prod",
+    sample_rate=1.0,                    # error events, 0..1
+    user=lambda: current_user_id(),     # hashed on the server, never stored raw
+)
+
+try:
+    charge(order)
+except Exception:
+    watch.capture_exception(context={"order": order.id})  # the exception being handled
+    raise
+
+watch.capture_error("provider refused", {"provider": "paystack"})  # like JS captureError
+watch.capture_message("cache cold", level="warning")               # a `log` event
+watch.add_breadcrumb("custom", step="reserve-stock")
+watch.flush(); watch.stop()
+```
+
+What is reported:
+
+- `error`: unhandled exceptions (framework hooks), `capture_exception`, `capture_error`.
+- `log`: `capture_message`, and log records at `log_event_level` and up (off by default).
+- `http`: outgoing `requests` / `httpx` calls that fail or answer 5xx (`http=False` turns it off).
+- `slow`: requests slower than `slow_ms` (default 4000 ms).
+- Each event carries the last 30 breadcrumbs of its request: `request`, `fetch`
+  (outgoing calls), `console` (log records at WARNING and up) and `custom`.
+  Breadcrumbs never leak between requests. URLs lose their query string, fragment
+  and credentials, and the server masks every value before storing it.
+
+Framework hooks capture unhandled exceptions with the request path and method,
+and read the `X-Watch-Session` header the Afribase mobile SDKs add to app
+requests, so the dashboard links a mobile session replay to the backend error
+it caused:
+
+```python
+# Django: settings.py
+MIDDLEWARE = ["afribase.watch.django.WatchMiddleware", *MIDDLEWARE]
+
+# Flask
+from afribase.watch.flask import init_flask
+init_flask(app)
+
+# FastAPI / Starlette (or wrap any ASGI app: app = WatchMiddleware(app))
+from afribase.watch.asgi import WatchMiddleware
+app.add_middleware(WatchMiddleware)
+
+# Anything else (job runners, other servers)
+token = watch.begin_request(session_id, path, method)
+try:
+    ...
+finally:
+    watch.end_request(token, status)
+```
+
+404s, 403s and other handled HTTP errors are not reported.
+
 ## Requirements
 
 - Python 3.9+

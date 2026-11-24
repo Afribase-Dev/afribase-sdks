@@ -28,16 +28,32 @@ Usage::
     channel.subscribe()
 """
 
+from afribase._auth import AfribaseAuthClient
 from afribase._client import AfribaseClient, create_client
 from afribase._email import AfribaseEmailClient
+from afribase._functions import AfribaseFunctionsClient
+from afribase._query_builder import AfribaseQueryBuilder, AfribaseRpcBuilder
+from afribase._realtime import AfribaseRealtimeClient, RealtimeChannel
+from afribase._storage import AfribaseStorageClient, StorageFileApi
 from afribase.modular import (
     db, select, insert, update, upsert, delete,
     eq, neq, gt, gte, lt, lte, like, ilike, is_, in_, match,
-    order, limit, single, maybe_single
+    contains, contained_by, text_search, not_, or_, filter,
+    order, limit, range, single, maybe_single, csv, geojson, explain,
 )
 from afribase._types import (
+    AuthChangeCallback,
     AuthChangeEvent,
+    AuthResponse,
     Factor,
+    FilterOperator,
+    MemoryStorage,
+    OAuthProvider,
+    RealtimeChannelEvent,
+    Subscription,
+    SupportedStorage,
+    UserAttributes,
+    VerifyOtpType,
     FunctionInvokeOptions,
     PostgrestError,
     PostgrestResponse,
@@ -52,10 +68,28 @@ from afribase._types import (
 )
 
 __all__ = [
+    "AfribaseAuthClient",
     "AfribaseClient",
     "AfribaseEmailClient",
+    "AfribaseFunctionsClient",
+    "AfribaseQueryBuilder",
+    "AfribaseRealtimeClient",
+    "AfribaseRpcBuilder",
+    "AfribaseStorageClient",
+    "RealtimeChannel",
+    "StorageFileApi",
     "create_client",
+    "AuthChangeCallback",
     "AuthChangeEvent",
+    "AuthResponse",
+    "FilterOperator",
+    "MemoryStorage",
+    "OAuthProvider",
+    "RealtimeChannelEvent",
+    "Subscription",
+    "SupportedStorage",
+    "UserAttributes",
+    "VerifyOtpType",
     "Factor",
     "FunctionInvokeOptions",
     "PostgrestError",
@@ -70,7 +104,9 @@ __all__ = [
     "UserIdentity",
     "db", "select", "insert", "update", "upsert", "delete",
     "eq", "neq", "gt", "gte", "lt", "lte", "like", "ilike", "is_", "in_", "match",
-    "order", "limit", "single", "maybe_single",
+    "contains", "contained_by", "text_search", "not_", "or_",
+    "order", "limit", "single", "maybe_single", "csv", "geojson", "explain",
+    # range and filter stay importable by name but out of __all__, so "import *" keeps the builtins.
 ]
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
