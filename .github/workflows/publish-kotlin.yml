@@ -1,6 +1,6 @@
 name: Publish watch-android (Maven Central)
 
-# Publishes dev.afribase:watch-android to Maven Central through the Sonatype
+# Publishes io.github.afribase-dev:watch-android to Maven Central through the Sonatype
 # Central Portal. Repo secrets needed (Settings -> Secrets -> Actions):
 #   MAVEN_CENTRAL_USERNAME, MAVEN_CENTRAL_PASSWORD  - Central Portal user token
 #   SIGNING_KEY            - ASCII-armored GPG private key

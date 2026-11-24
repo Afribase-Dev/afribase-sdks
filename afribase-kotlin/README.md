@@ -15,7 +15,7 @@ and the dashboard.
 From Maven Central (after the first release):
 
 ```kotlin
-implementation("dev.afribase:watch-android:0.1.0")
+implementation("io.github.afribase-dev:watch-android:0.1.0")
 ```
 
 Or from JitPack now:

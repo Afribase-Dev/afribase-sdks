@@ -47,14 +47,14 @@ dependencies {
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 }
 
-// Maven Central (Sonatype Central Portal) as dev.afribase:watch-android, and
+// Maven Central (Sonatype Central Portal) as io.github.afribase-dev:watch-android, and
 // JitPack (jitpack.yml at the repo root runs publishToMavenLocal).
 // Credentials and the signing key come from Gradle properties / env vars,
 // never from this file:
 //   mavenCentralUsername / mavenCentralPassword   (Central Portal user token)
 //   signingInMemoryKey / signingInMemoryKeyPassword (ASCII-armored GPG key)
 // as ORG_GRADLE_PROJECT_<name> in CI, or in ~/.gradle/gradle.properties.
-val publishGroup = (findProperty("publishGroup") as String?) ?: "dev.afribase"
+val publishGroup = (findProperty("publishGroup") as String?) ?: "io.github.afribase-dev"
 val publishVersion = (findProperty("publishVersion") as String?) ?: "0.1.0"
 
 mavenPublishing {
