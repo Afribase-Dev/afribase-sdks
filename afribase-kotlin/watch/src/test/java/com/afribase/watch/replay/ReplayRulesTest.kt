@@ -31,10 +31,11 @@ class MaskingTest {
         // maskAllInputs opt-in: inputs masked, labels not.
         assertEquals("****", Masking.textFor("Jane", isInput = true, isSecret = false, unmasked = true, maskAllText = false, maskAllInputs = true))
         assertEquals("Jane", Masking.textFor("Jane", isInput = false, isSecret = false, unmasked = false, maskAllText = false, maskAllInputs = true))
-        // maskAllText opt-in: everything masked, watchUnmask labels excepted, inputs always.
+        // maskAllText opt-in: everything masked, watchUnmask views excepted.
         assertEquals("****", Masking.textFor("Jane", false, false, unmasked = false, maskAllText = true))
+        assertEquals("****", Masking.textFor("Jane", isInput = true, isSecret = false, unmasked = false, maskAllText = true))
         assertEquals("Jane", Masking.textFor("Jane", false, false, unmasked = true, maskAllText = true))
-        assertEquals("****", Masking.textFor("Jane", isInput = true, isSecret = false, unmasked = true, maskAllText = true))
+        assertEquals("Jane", Masking.textFor("Jane", isInput = true, isSecret = false, unmasked = true, maskAllText = true))
     }
 
     @Test

@@ -100,8 +100,8 @@ class ViewWalkerTest {
 
         val inputs = nodes.filter { it.k == Kind.INPUT }
         assertEquals(2, inputs.size)
-        // maskAllText: inputs masked, even under watchUnmask.
-        assertEquals("****************", inputs[0].text)
+        // maskAllText: a watchUnmask input is sent as is.
+        assertEquals("jane@example.com", inputs[0].text)
         // Password: no text, no length.
         assertTrue(inputs[1].textNull)
         assertNull(inputs[1].text)
@@ -121,7 +121,7 @@ class ViewWalkerTest {
         assertFalse(json.contains("invisible"))
         assertFalse(json.contains("4242"))
         assertFalse(json.contains("hunter2"))
-        assertFalse(json.contains("jane"))
+        assertFalse(json.contains("Jane Doe"))
         assertFalse(json.contains("Jane"))
     }
 

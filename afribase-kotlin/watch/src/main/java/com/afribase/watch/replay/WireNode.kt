@@ -128,7 +128,8 @@ internal object Masking {
      * @param isSecret password / one-time-code / card field: never sent ([SECRET]).
      * @param unmasked the view or an ancestor carries `watchUnmask`.
      * @param masked the view or an ancestor carries `watchMask`.
-     * @param maskAllText the app's maskAllText opt-in: all text masked, inputs too.
+     * @param maskAllText the app's maskAllText opt-in: all text masked, inputs
+     *   too, except under `watchUnmask`.
      * @param maskAllInputs the app's maskAllInputs opt-in: input values masked.
      */
     fun textFor(
@@ -143,7 +144,7 @@ internal object Masking {
         if (isSecret) return SECRET
         if (raw == null) return null
         if (masked) return mask(raw)
-        if (isInput) return if (maskAllInputs || maskAllText) mask(raw) else cap(raw)
+        if (isInput && maskAllInputs) return mask(raw)
         return if (maskAllText && !unmasked) mask(raw) else cap(raw)
     }
 

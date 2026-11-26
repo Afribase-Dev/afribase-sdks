@@ -66,7 +66,7 @@ class App : Application() {
 | --- | --- | --- |
 | `replay` | `false` | Wireframe replay. The target owner must also turn replay on in Watch settings, or the server refuses the upload. |
 | `live` | `true` | Presence heartbeats. The server drops them unless the target owner turns live presence on. |
-| `maskAllText` | `false` | Replay opt-in: every label and input masked unless it (or an ancestor) has `watchUnmask` (inputs stay masked). Off: text is sent as shown; only password / one-time-code / card fields are hidden. |
+| `maskAllText` | `false` | Replay opt-in: every label and input masked unless it (or an ancestor) has `watchUnmask`. Off: text is sent as shown; only password / one-time-code / card fields are hidden. |
 | `maskAllInputs` | `false` | Replay opt-in: every input value masked (`*`, length kept); labels unaffected. |
 | `ux` | `true` | Rage taps, slow screens, errors after a tap, navigation loops. |
 | `sampleRate` | `1.0` | Share of error events sent. |
