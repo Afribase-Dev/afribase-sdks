@@ -46,6 +46,7 @@ internal class WalkContext(
     val ids: NodeIds,
     val deadlineNanos: Long,
     val nanoTime: () -> Long = System::nanoTime,
+    val maskAllInputs: Boolean = false,
 ) {
     var nodes = 0
     var truncated = false
@@ -83,7 +84,7 @@ internal interface ComposeBridge {
     fun isComposeRoot(v: View): Boolean
 
     /** The nodes for a Compose root at (leftPx, topPx) on screen. */
-    fun walk(v: View, leftPx: Float, topPx: Float, unmasked: Boolean, depth: Int, ctx: WalkContext): List<WireNode>
+    fun walk(v: View, leftPx: Float, topPx: Float, unmasked: Boolean, masked: Boolean, depth: Int, ctx: WalkContext): List<WireNode>
 }
 
 /**
@@ -116,7 +117,7 @@ internal class ViewWalker(private val compose: ComposeBridge?) {
     }
 
     /** One view and its subtree; null when it is skipped. [left]/[top]: px on screen. */
-    private fun visit(v: View, left: Float, top: Float, parentUnmasked: Boolean, depth: Int, ctx: WalkContext, isRoot: Boolean = false): WireNode? {
+    private fun visit(v: View, left: Float, top: Float, parentUnmasked: Boolean, depth: Int, ctx: WalkContext, isRoot: Boolean = false, parentMasked: Boolean = false): WireNode? {
         if (ctx.secureMarker) return null
         if (Markers.isSecure(v)) {
             ctx.secureMarker = true
@@ -131,6 +132,7 @@ internal class ViewWalker(private val compose: ComposeBridge?) {
         if (ctx.full()) return null
 
         val unmasked = parentUnmasked || Markers.isUnmasked(v)
+        val masked = parentMasked || Markers.isMasked(v)
         val id = ctx.ids.of(v)
         ctx.nodes++
 
@@ -153,7 +155,7 @@ internal class ViewWalker(private val compose: ComposeBridge?) {
             if (secret) {
                 Masking.apply(node, Masking.SECRET)
             } else if (!raw.isNullOrEmpty()) {
-                Masking.apply(node, Masking.textFor(raw, input, false, unmasked, ctx.maskAllText))
+                Masking.apply(node, Masking.textFor(raw, input, false, unmasked, ctx.maskAllText, ctx.maskAllInputs, masked))
             }
         }
 
@@ -163,7 +165,7 @@ internal class ViewWalker(private val compose: ComposeBridge?) {
 
         if (compose != null && compose.isComposeRoot(v)) {
             if (depth < WalkContext.MAX_DEPTH) {
-                for (c in compose.walk(v, left, top, unmasked, depth + 1, ctx)) node.add(c)
+                for (c in compose.walk(v, left, top, unmasked, masked, depth + 1, ctx)) node.add(c)
             }
         } else if (v is ViewGroup && depth < WalkContext.MAX_DEPTH) {
             val sx = v.scrollX
@@ -172,7 +174,7 @@ internal class ViewWalker(private val compose: ComposeBridge?) {
                 val c = v.getChildAt(i) ?: continue
                 val cl = left + c.left - sx + c.translationX
                 val ct = top + c.top - sy + c.translationY
-                val child = visit(c, cl, ct, unmasked, depth + 1, ctx) ?: continue
+                val child = visit(c, cl, ct, unmasked, depth + 1, ctx, parentMasked = masked) ?: continue
                 hoistInto(node, child)
                 if (ctx.secureMarker) return null
             }

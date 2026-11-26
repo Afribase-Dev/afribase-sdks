@@ -2,5 +2,6 @@
 <resources>
     <item name="afribase_watch_block" type="id" />
     <item name="afribase_watch_unmask" type="id" />
+    <item name="afribase_watch_mask" type="id" />
     <item name="afribase_watch_secure_screen" type="id" />
 </resources>

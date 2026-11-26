@@ -2,7 +2,9 @@ package com.afribase.watch.replay
 
 import android.app.Activity
 import android.os.Looper
+import android.text.InputType
 import android.view.WindowManager
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.afribase.watch.EventStore
@@ -117,14 +119,20 @@ class WireframeRecorderTest {
     }
 
     @Test
-    fun secureWindowRecordedWhenOwnerOptsIn_textStillMasked() {
+    fun secureWindowRecordedWhenOwnerOptsIn_followsNormalMasking() {
         val a = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
-        a.setContentView(TextView(a).apply { text = "Secret" })
+        a.setContentView(LinearLayout(a).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(TextView(a).apply { text = "Hello Ada" })
+            addView(EditText(a).apply {
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+                setText("hunter2")
+            })
+        })
         a.window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
         shadowOf(Looper.getMainLooper()).idle()
 
         val store = EventStore(tmp.newFolder("o"), 3, ".json.gz")
-        // maskAllText off on purpose: a FLAG_SECURE window still masks text.
         val r = recorder(store, maskAllText = false, replayOnSecureWindows = true)
         r.setActivity(a, "ChatActivity")
         r.walkOnce()
@@ -136,8 +144,41 @@ class WireframeRecorderTest {
         assertTrue(json, json.contains("\"type\":\"snapshot\",\"screen\":\"ChatActivity\""))
         assertTrue(json.contains("\"secure\":false"))
         assertFalse(json.contains("\"root\":null"))
-        assertTrue(json.contains("\"text\":\"******\""))
+        assertTrue(json, json.contains("\"text\":\"Hello Ada\""))
+        assertTrue(json, json.contains("\"text\":null"))
         assertTrue(json.contains("\"x\":10"))
-        assertFalse(json.contains("Secret"))
+        assertFalse(json.contains("hunter2"))
+    }
+
+    @Test
+    fun uploadRetriesOnceWithNewerHalfOn413() {
+        val a = Robolectric.buildActivity(Activity::class.java).setup().visible().get()
+        val label = TextView(a).apply { text = "v0" }
+        a.setContentView(label)
+        shadowOf(Looper.getMainLooper()).idle()
+
+        val sizes = ArrayList<Int>()
+        val codes = ArrayDeque(listOf(413, 202))
+        val transport = object : Transport {
+            override fun post(url: String, body: ByteArray, key: String): Int {
+                sizes.add(String(GZIPInputStream(body.inputStream()).readBytes()).split("\"type\":\"snapshot\"").size - 1)
+                return codes.removeFirstOrNull() ?: 202
+            }
+        }
+        val r = WireframeRecorder(
+            url = "https://api.test/watch/ingest/replay?key=k", key = "k", maskAllText = false,
+            meta = { trigger -> ReplayMeta("k", "sid", null, null, null, "Main", linkedMapOf(), trigger) },
+            transport = transport, worker = worker, pending = EventStore(tmp.newFolder("p"), 3, ".json.gz"), log = {},
+        )
+        r.setActivity(a, "Main")
+        for (i in 1..8) {
+            label.text = "v$i"
+            shadowOf(Looper.getMainLooper()).idle()
+            r.walkOnce()
+        }
+        drain()
+        r.upload("error")
+        assertEquals(2, sizes.size)
+        assertTrue(sizes.toString(), sizes[1] in 1 until sizes[0])
     }
 }

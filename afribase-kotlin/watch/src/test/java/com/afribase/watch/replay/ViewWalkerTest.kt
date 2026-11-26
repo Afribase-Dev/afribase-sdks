@@ -16,6 +16,7 @@ import android.widget.Switch
 import android.widget.TextView
 import com.afribase.watch.watchBlock
 import com.afribase.watch.watchSecureScreen
+import com.afribase.watch.watchMask
 import com.afribase.watch.watchUnmask
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -39,7 +40,13 @@ class ViewWalkerTest {
         return a
     }
 
-    private fun walk(a: Activity, maskAllText: Boolean = true, ids: NodeIds = NodeIds(), flags: Int = a.window.attributes.flags): Pair<WalkResult, WalkContext> {
+    private fun walk(
+        a: Activity,
+        maskAllText: Boolean = true,
+        ids: NodeIds = NodeIds(),
+        flags: Int = a.window.attributes.flags,
+        maskAllInputs: Boolean = false,
+    ): Pair<WalkResult, WalkContext> {
         val decor = a.window.decorView
         val ctx = WalkContext(
             density = a.resources.displayMetrics.density,
@@ -48,6 +55,7 @@ class ViewWalkerTest {
             maskAllText = maskAllText,
             ids = ids,
             deadlineNanos = Long.MAX_VALUE,
+            maskAllInputs = maskAllInputs,
         )
         return walker().walk("Main", decor, flags, IntArray(2), ctx) to ctx
     }
@@ -92,7 +100,7 @@ class ViewWalkerTest {
 
         val inputs = nodes.filter { it.k == Kind.INPUT }
         assertEquals(2, inputs.size)
-        // Inputs always masked, even under watchUnmask.
+        // maskAllText: inputs masked, even under watchUnmask.
         assertEquals("****************", inputs[0].text)
         // Password: no text, no length.
         assertTrue(inputs[1].textNull)
@@ -118,12 +126,67 @@ class ViewWalkerTest {
     }
 
     @Test
-    fun maskAllTextOffSendsLabelsButNotInputs() {
+    fun defaultSendsTextAndInputsButNeverSecrets() {
         val a = activity(::form)
         val nodes = all(walk(a, maskAllText = false).first.root)
         assertEquals("Jane Doe", nodes.first { it.k == Kind.TEXT }.text)
         assertEquals("Pay", nodes.single { it.k == Kind.BUTTON }.text)
-        assertEquals("****************", nodes.first { it.k == Kind.INPUT }.text)
+        val inputs = nodes.filter { it.k == Kind.INPUT }
+        assertEquals("jane@example.com", inputs[0].text)
+        // Password: still no text, no length.
+        assertTrue(inputs[1].textNull)
+        assertNull(inputs[1].text)
+        val json = walk(a, maskAllText = false).first.root!!.toJson()
+        assertFalse(json.contains("hunter2"))
+        assertFalse(json.contains("4242"))
+    }
+
+    @Test
+    fun secretFieldsByInputTypeHintAndIdNeverSent() {
+        val a = activity { act ->
+            LinearLayout(act).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(EditText(act).apply { inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD; setText("1234") })
+                addView(EditText(act).apply { inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD; setText("webpass") })
+                addView(EditText(act).apply { setAutofillHints(View.AUTOFILL_HINT_CREDIT_CARD_NUMBER); setText("4111111111111111") })
+                addView(EditText(act).apply { setAutofillHints("smsOTPCode"); setText("482913") })
+                addView(EditText(act).apply { setText("Lagos") })
+            }
+        }
+        val inputs = all(walk(a, maskAllText = false).first.root).filter { it.k == Kind.INPUT }
+        assertEquals(5, inputs.size)
+        assertTrue(inputs.take(4).all { it.textNull && it.text == null })
+        assertEquals("Lagos", inputs[4].text)
+    }
+
+    @Test
+    fun maskAllInputsMasksInputsOnly() {
+        val a = activity(::form)
+        val nodes = all(walk(a, maskAllText = false, maskAllInputs = true).first.root)
+        assertEquals("Jane Doe", nodes.first { it.k == Kind.TEXT }.text)
+        val inputs = nodes.filter { it.k == Kind.INPUT }
+        assertEquals("****************", inputs[0].text)
+        assertTrue(inputs[1].textNull)
+    }
+
+    @Test
+    fun watchMaskMasksThatSubtree() {
+        val a = activity { act ->
+            LinearLayout(act).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(TextView(act).apply { text = "Visible" })
+                addView(LinearLayout(act).apply {
+                    addView(TextView(act).apply { text = "Balance 4,000" })
+                }.watchMask())
+                addView(TextView(act).apply { text = "Tagged"; tag = "watchMask" })
+            }
+        }
+        val texts = all(walk(a, maskAllText = false).first.root).mapNotNull { it.text }
+        assertTrue(texts.toString(), texts.contains("Visible"))
+        assertTrue(texts.toString(), texts.contains("*************"))
+        assertTrue(texts.toString(), texts.contains("******"))
+        assertFalse(texts.toString(), texts.contains("Balance 4,000"))
+        assertFalse(texts.toString(), texts.contains("Tagged"))
     }
 
     @Test

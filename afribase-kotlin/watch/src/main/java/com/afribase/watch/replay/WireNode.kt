@@ -122,17 +122,29 @@ internal object Masking {
     }
 
     /**
-     * The text a node carries.
-     * @param isInput an editable field: always masked.
+     * The text a node carries. Default: as shown (capped); only secret
+     * fields are hidden.
+     * @param isInput an editable field.
      * @param isSecret password / one-time-code / card field: never sent ([SECRET]).
      * @param unmasked the view or an ancestor carries `watchUnmask`.
-     * @param maskAllText the app's maskAllText setting.
+     * @param masked the view or an ancestor carries `watchMask`.
+     * @param maskAllText the app's maskAllText opt-in: all text masked, inputs too.
+     * @param maskAllInputs the app's maskAllInputs opt-in: input values masked.
      */
-    fun textFor(raw: CharSequence?, isInput: Boolean, isSecret: Boolean, unmasked: Boolean, maskAllText: Boolean): Any? {
+    fun textFor(
+        raw: CharSequence?,
+        isInput: Boolean,
+        isSecret: Boolean,
+        unmasked: Boolean,
+        maskAllText: Boolean,
+        maskAllInputs: Boolean = false,
+        masked: Boolean = false,
+    ): Any? {
         if (isSecret) return SECRET
         if (raw == null) return null
-        if (isInput) return mask(raw)
-        return if (unmasked || !maskAllText) cap(raw) else mask(raw)
+        if (masked) return mask(raw)
+        if (isInput) return if (maskAllInputs || maskAllText) mask(raw) else cap(raw)
+        return if (maskAllText && !unmasked) mask(raw) else cap(raw)
     }
 
     /** Marker for `"text": null`. */

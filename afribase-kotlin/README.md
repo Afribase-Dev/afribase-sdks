@@ -54,7 +54,7 @@ class App : Application() {
                 environment = "production",
                 replay = false,      // wireframe replay, opt-in
                 live = true,         // live presence heartbeats
-                maskAllText = true,  // replay: mask every label unless watchUnmask
+                maskAllText = false, // replay: true masks every label unless watchUnmask
                 user = { session.userId },
             ),
         )
@@ -66,12 +66,13 @@ class App : Application() {
 | --- | --- | --- |
 | `replay` | `false` | Wireframe replay. The target owner must also turn replay on in Watch settings, or the server refuses the upload. |
 | `live` | `true` | Presence heartbeats. The server drops them unless the target owner turns live presence on. |
-| `maskAllText` | `true` | Replay: every label masked unless it (or an ancestor) has `watchUnmask`. Inputs are masked either way. |
+| `maskAllText` | `false` | Replay opt-in: every label and input masked unless it (or an ancestor) has `watchUnmask` (inputs stay masked). Off: text is sent as shown; only password / one-time-code / card fields are hidden. |
+| `maskAllInputs` | `false` | Replay opt-in: every input value masked (`*`, length kept); labels unaffected. |
 | `ux` | `true` | Rage taps, slow screens, errors after a tap, navigation loops. |
 | `sampleRate` | `1.0` | Share of error events sent. |
 | `slowScreenMs` | `3000` | A screen whose first frame takes longer is reported as `slow`. |
 | `debug` | `false` | Log what is sent to logcat (tag `AfribaseWatch`). |
-| `replayOnSecureWindows` | `false` | Replay: record a wireframe even on `FLAG_SECURE` windows (otherwise they are "secure screen" placeholders). No pixels are ever taken; on those windows all text is masked whatever `maskAllText` says. Screens marked `watchSecureScreen` stay placeholders. |
+| `replayOnSecureWindows` | `false` | Replay: record a wireframe even on `FLAG_SECURE` windows (otherwise they are "secure screen" placeholders). No pixels are ever taken; those windows follow the same masking as any screen (secret fields never sent). Screens marked `watchSecureScreen` stay placeholders. |
 
 ## Client API (same as the JS SDK)
 
@@ -167,11 +168,16 @@ Recorded: `snapshot`, `screen`, `touch` (down / up / move every 100 ms),
 
 ### Privacy rules
 
-- Text is masked (`*` per character, length kept, capped at 40) unless
-  unmasked; inputs are always masked; password, one-time-code and card
-  fields send `"text": null` (no length). Detected by input type, password
-  transformation, autofill hints and resource id names (`password`, `otp`,
-  `cvv`, `card`, `pin`...). Compose: `SemanticsProperties.Password`.
+- Default: text and input values are sent as shown (capped at 40
+  characters). Password, one-time-code and card fields always send
+  `"text": null` (no length), whatever the options or markers. Detected by
+  input type, password transformation, autofill hints and resource id names
+  (`password`, `otp`, `cvv`, `card`, `pin`...). Compose:
+  `SemanticsProperties.Password`, or a text field whose `testTag` has one of
+  those names.
+- To mask more: `maskAllText = true` (everything, `watchUnmask` labels
+  excepted), `maskAllInputs = true` (input values), or `watchMask()` on a
+  view / modifier (that subtree). Masked = `*` per character, length kept.
 - `FLAG_SECURE` on the window, or `watchSecureScreen` anywhere in the tree:
   `"secure": true, "root": null`, touches without coordinates, no scroll or
   keyboard events, no error markers.
@@ -184,11 +190,13 @@ Views (Kotlin / Java / XML):
 
 ```kotlin
 cardForm.watchBlock()          // WatchMarkers.watchBlock(cardForm) from Java
-promoBanner.watchUnmask()
+promoBanner.watchUnmask()     // sent as is even under maskAllText
+balanceCard.watchMask()       // masked even with maskAllText off
 pinScreenRoot.watchSecureScreen()
 ```
 ```xml
 <LinearLayout android:tag="watchBlock" ... />
+<TextView android:tag="watchMask" ... />
 ```
 
 Compose:
@@ -198,6 +206,7 @@ import com.afribase.watch.compose.*
 
 Column(Modifier.watchBlock()) { CardForm() }
 Text("Welcome", Modifier.watchUnmask())
+Text(balance, Modifier.watchMask())
 Box(Modifier.watchSecureScreen()) { PinPad() }
 ```
 

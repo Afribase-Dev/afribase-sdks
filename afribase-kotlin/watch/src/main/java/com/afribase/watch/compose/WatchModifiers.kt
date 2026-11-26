@@ -13,14 +13,21 @@ import androidx.compose.ui.semantics.semantics
 object WatchSemantics {
     val Block = SemanticsPropertyKey<Boolean>("AfribaseWatchBlock")
     val Unmask = SemanticsPropertyKey<Boolean>("AfribaseWatchUnmask")
+    val Mask = SemanticsPropertyKey<Boolean>("AfribaseWatchMask")
     val SecureScreen = SemanticsPropertyKey<Boolean>("AfribaseWatchSecureScreen")
 }
 
 /** Sends this element as one `blocked` box: no children, no text. */
 fun Modifier.watchBlock(): Modifier = semantics { set(WatchSemantics.Block, true) }
 
-/** Sends the real text of this element and its children (inputs stay masked). */
+/**
+ * Sends the real text of this element and its children even when
+ * `maskAllText` is on (inputs stay masked under `maskAllText` / `maskAllInputs`).
+ */
 fun Modifier.watchUnmask(): Modifier = semantics { set(WatchSemantics.Unmask, true) }
+
+/** Masks the text of this element and its children as `*` (length kept). */
+fun Modifier.watchMask(): Modifier = semantics { set(WatchSemantics.Mask, true) }
 
 /** Treats the whole screen holding this element as secure: no wireframe at all. */
 fun Modifier.watchSecureScreen(): Modifier = semantics { set(WatchSemantics.SecureScreen, true) }

@@ -25,6 +25,7 @@ internal class WireframeRecorder(
     private val url: String,
     private val key: String,
     private val maskAllText: Boolean,
+    private val maskAllInputs: Boolean = false,
     private val meta: (trigger: String) -> ReplayMeta,
     private val transport: Transport,
     private val worker: ScheduledExecutorService,
@@ -162,13 +163,22 @@ internal class WireframeRecorder(
         buffer.clear()
     }
 
-    private fun upload(trigger: String) {
+    /** Worker: sends the buffer now (internal for tests). */
+    internal fun upload(trigger: String) {
         if (stopped) return
         val events = buffer.events(System.currentTimeMillis())
         if (events.isEmpty()) return
-        val body = encode(meta(trigger), events) ?: return
+        val m = meta(trigger)
+        val body = encode(m, events) ?: return
         val code = transport.post(url, body, key)
         log("replay upload ($trigger, ${events.size} events, ${body.size} B) -> $code")
+        if (code == 413) {
+            // Over the server's limit: send the newer half once.
+            val half = ReplayPayload.halve(events) ?: return
+            val smaller = encode(m, half) ?: return
+            val retry = transport.post(url, smaller, key)
+            log("replay upload retry ($trigger, ${half.size} events, ${smaller.size} B) -> $retry")
+        }
     }
 
     private fun encode(m: ReplayMeta, all: List<BufferedEvent>): ByteArray? {
@@ -195,14 +205,14 @@ internal class WireframeRecorder(
         val started = System.nanoTime()
         decor.getLocationOnScreen(origin)
         val dm = a.resources.displayMetrics
-        val flagSecure = (window.attributes.flags and android.view.WindowManager.LayoutParams.FLAG_SECURE) != 0
         val ctx = WalkContext(
             density = dm.density,
             screenWpx = decor.width + maxOf(0, origin[0]),
             screenHpx = decor.height + maxOf(0, origin[1]),
-            // A FLAG_SECURE window recorded on the owner's say-so: text is
-            // always masked there, whatever maskAllText says.
-            maskAllText = maskAllText || (replayOnSecureWindows && flagSecure),
+            // A FLAG_SECURE window recorded on the owner's say-so follows
+            // the same masking as any screen: secret fields are never sent.
+            maskAllText = maskAllText,
+            maskAllInputs = maskAllInputs,
             ids = ids,
             deadlineNanos = started + HARD_CAP_NANOS,
         )

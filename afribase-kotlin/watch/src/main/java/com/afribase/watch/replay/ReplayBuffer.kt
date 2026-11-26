@@ -67,7 +67,7 @@ internal class ReplayBuffer(
     companion object {
         const val TYPE_SNAPSHOT = "snapshot"
         const val WINDOW_MS = 60_000L
-        const val MAX_EVENTS = 20_000
+        const val MAX_EVENTS = 40_000
     }
 }
 
@@ -143,7 +143,7 @@ internal class UploadGate(
         const val DELAY_MS = 5_000L
         const val THROTTLE_MS = 30_000L
         const val MAX_PER_LAUNCH = 10
-        const val MAX_BODY_BYTES = 5 * 1024 * 1024
+        const val MAX_BODY_BYTES = 10 * 1024 * 1024
     }
 }
 

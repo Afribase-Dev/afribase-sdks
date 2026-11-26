@@ -18,17 +18,23 @@ class MaskingTest {
 
     @Test
     fun textRules() {
-        // Default: everything masked.
-        assertEquals("****", Masking.textFor("Jane", isInput = false, isSecret = false, unmasked = false, maskAllText = true))
-        // Unmasked label: real text, capped.
-        assertEquals("Jane", Masking.textFor("Jane", false, false, unmasked = true, maskAllText = true))
-        assertEquals(40, (Masking.textFor("y".repeat(99), false, false, true, true) as String).length)
-        // maskAllText off: labels in clear.
-        assertEquals("Jane", Masking.textFor("Jane", false, false, false, maskAllText = false))
-        // Inputs: always masked, even unmasked and with maskAllText off.
-        assertEquals("****", Masking.textFor("Jane", isInput = true, isSecret = false, unmasked = true, maskAllText = false))
-        // Secrets: never text or length.
+        // Default (maskAllText and maskAllInputs off): labels and inputs as shown.
+        assertEquals("Jane", Masking.textFor("Jane", isInput = false, isSecret = false, unmasked = false, maskAllText = false))
+        assertEquals("jane@x.io", Masking.textFor("jane@x.io", isInput = true, isSecret = false, unmasked = false, maskAllText = false))
+        assertEquals(40, (Masking.textFor("y".repeat(99), false, false, false, false) as String).length)
+        // Secrets: never text or length, whatever the options and markers.
         assertTrue(Masking.textFor("hunter2", true, isSecret = true, unmasked = true, maskAllText = false) === Masking.SECRET)
+        assertTrue(Masking.textFor("hunter2", true, true, false, false, maskAllInputs = false, masked = false) === Masking.SECRET)
+        // watchMask: that view masked even with every option off.
+        assertEquals("****", Masking.textFor("Jane", false, false, false, false, masked = true))
+        assertEquals("****", Masking.textFor("Jane", true, false, true, false, masked = true))
+        // maskAllInputs opt-in: inputs masked, labels not.
+        assertEquals("****", Masking.textFor("Jane", isInput = true, isSecret = false, unmasked = true, maskAllText = false, maskAllInputs = true))
+        assertEquals("Jane", Masking.textFor("Jane", isInput = false, isSecret = false, unmasked = false, maskAllText = false, maskAllInputs = true))
+        // maskAllText opt-in: everything masked, watchUnmask labels excepted, inputs always.
+        assertEquals("****", Masking.textFor("Jane", false, false, unmasked = false, maskAllText = true))
+        assertEquals("Jane", Masking.textFor("Jane", false, false, unmasked = true, maskAllText = true))
+        assertEquals("****", Masking.textFor("Jane", isInput = true, isSecret = false, unmasked = true, maskAllText = true))
     }
 
     @Test

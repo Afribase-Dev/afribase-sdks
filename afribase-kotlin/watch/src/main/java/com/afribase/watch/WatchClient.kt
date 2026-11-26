@@ -114,6 +114,7 @@ internal class WatchClient(
             url = Urls.sub(config.endpoint, "replay", config.key),
             key = config.key,
             maskAllText = config.maskAllText,
+            maskAllInputs = config.maskAllInputs,
             replayOnSecureWindows = config.replayOnSecureWindows,
             meta = { trigger -> replayMeta(trigger) },
             transport = transport,
